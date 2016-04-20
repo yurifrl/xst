@@ -29,7 +29,7 @@ LDFLAGS += -g ${LIBS}
 SRC = src/st.c
 OBJ = ${SRC:.c=.o}
 
-all: options st
+all: options st stc std
 
 options:
 	@echo st build options:
@@ -47,9 +47,25 @@ st: ${OBJ}
 	@echo CC -o $@
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+src/stc.o:
+	@echo CC src/stc.c
+	@${CC} -o src/stc.o -c ${CFLAGS} src/stc.c
+
+stc: src/stc.o
+	@echo CC -o $@
+	@${CC} -o stc src/stc.o ${LDFLAGS}
+
+src/std.o:
+	@echo CC src/std.c
+	@${CC} -o src/std.o -c ${CFLAGS} src/std.c
+
+std: src/std.o
+	@echo CC -o $@
+	@${CC} -o std src/std.o ${LDFLAGS}
+
 clean:
 	@echo cleaning
-	@rm -f st ${OBJ} st-${VERSION}.tar.gz
+	@rm -f st stc std src/stc.o src/std.o ${OBJ} st-${VERSION}.tar.gz
 
 dist: clean
 	@echo creating dist tarball

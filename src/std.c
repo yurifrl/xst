@@ -1,7 +1,9 @@
 /* Source file for the st client */
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>             /* uint8_t */
+
+#include <limits.h>
 #include <string.h>
 
 #include <sys/utsname.h>
@@ -46,19 +48,24 @@ unix_sockname()
 		path);		/* string to duplicate */
 }
 
+/* WARNING > This function will NOT send data larger than 65535 bytes, and */
+/*         > will NOT tell you what it did not send. It just wont send it. */
 void
 send(data, len)
      char *data;		/* byte data to send */
      int len;			/* length of the byte array */
 {
-  uint8_t s[s];
+  uint8_t s[2];                 /* unsigned char */
 
   if(len > 65535) {		/* cap the length */
     len = 65535;
   }
 
-  s[0] = len >> 8;
-  s[1] = len;
+  s[0] = len >> 8;              /* these two lines are putting the length */
+  s[1] = len;                   /* into an unsigned char array for writing */
+                                /* I think this is to enforce endian-ness */
+  write(fd, s, 2);              /* write the length array */
+  write(fd, data, len);         /* write the actual data */
 }
 
 int

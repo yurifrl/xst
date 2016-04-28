@@ -17,51 +17,7 @@
 
 #include <errno.h>
 
-#ifndef PATH_MAX
-#define PATH_MAX 16384
-#endif
-
-struct st_connection {
-  int fd;                       /* socket file descriptor */
-};
-
-char *
-unix_sockname(void)
-{
-  char name[PATH_MAX];		     /* PATH_MAX is in limits.h */
-  char *path = getenv("XST_SOCKET"); /* if launched with a configured socket */
-
-  if(path == NULL) { 		/* Only if the environment has no socket defined */
-    struct utsname u;
-    uname(&u);
-
-    path = getenv("HOME");
-    if(path == NULL) {
-      path = "/tmp";
-    }
-
-    snprintf(			/* print formatted into a string maximally n len */
-	     name,		/* string to print into */
-	     PATH_MAX,		/* maximal len */
-	     "%s/.xst",		/* format to print */
-	     path);		/* replace first format variable */
-    
-    mkdir(			/* make a new directory */
-	  name,			/* name of the new directory */
-	  0777);		/* chmod argument */
-
-    snprintf(name,
-	     PATH_MAX,
-	     "%s/.xst/xstd-%s",
-	     path,
-	     u.nodename);
-
-    path = name;
-  }
-
-  return strdup(		/* return a duplicated string (malloc) */
-		path);		/* string to duplicate */
-}
+#include "st_shared.h"
 
 /* WARNING > This function will NOT send data larger than 65535 bytes, and */
 /*         > will NOT tell you what it did not send. It just wont send it. */
@@ -168,12 +124,15 @@ start_listener(char *socket_name, struct st_connection *connection)
     if(accept_result < 0) {     /* error on -1 */
       if(errno == EAGAIN) {
         printf("no connection on non blocking socket. sleeping.\n");
-        sleep(5);
+        sleep(6);
       }
       else {
         perror("unhandled error.");
         exit(EXIT_FAILURE);
       }
+    }
+    else {
+      printf("connection received...\n");
     }
   }
 }
@@ -181,7 +140,7 @@ start_listener(char *socket_name, struct st_connection *connection)
 int
 main(int argc, char **argv)
 {
-  char *socket_name = unix_sockname();
+  char *socket_name = unix_socket_name();
   struct st_connection connection;
   start_listener(socket_name, &connection);
   

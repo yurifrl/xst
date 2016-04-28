@@ -47,25 +47,29 @@ st: ${OBJ}
 	@echo CC -o $@
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+src/st_shared.o:
+	@echo CC src/st_shared.c
+	@${CC} -o src/st_shared.o -c ${CFLAGS} src/st_shared.c
+
 src/stc.o:
 	@echo CC src/stc.c
 	@${CC} -o src/stc.o -c ${CFLAGS} src/stc.c
 
-stc: src/stc.o
+stc: src/stc.o src/st_shared.o
 	@echo CC -o $@
-	@${CC} -o stc src/stc.o ${LDFLAGS}
+	@${CC} -o stc src/stc.o src/st_shared.o ${LDFLAGS}
 
 src/std.o:
 	@echo CC src/std.c
 	@${CC} -o src/std.o -c ${CFLAGS} src/std.c
 
-std: src/std.o
+std: src/std.o src/st_shared.o
 	@echo CC -o $@
-	@${CC} -o std src/std.o ${LDFLAGS}
+	@${CC} -o std src/std.o src/st_shared.o ${LDFLAGS}
 
 clean:
 	@echo cleaning
-	@rm -f st stc std src/stc.o src/std.o ${OBJ} st-${VERSION}.tar.gz
+	@rm -f st stc std src/*.o ${OBJ} st-${VERSION}.tar.gz
 
 dist: clean
 	@echo creating dist tarball

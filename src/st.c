@@ -1423,8 +1423,7 @@ selnotify(XEvent *e)
 	 * Deleting the property again tells the selection owner to send the
 	 * next data chunk in the property.
 	 */
-	if (e->type == PropertyNotify)
-		XDeleteProperty(xw.dpy, xw.win, (int)property);
+	XDeleteProperty(xw.dpy, xw.win, (int)property);
 }
 
 void
@@ -1614,6 +1613,9 @@ execsh(void)
 	if ((sh = getenv("SHELL")) == NULL)
 		sh = (pw->pw_shell[0]) ? pw->pw_shell : shell;
 
+	if (shell[0] == '/')
+		sh = shell;
+
 	if (opt_cmd)
 		prog = opt_cmd[0];
 	else if (utmp)
@@ -1678,9 +1680,9 @@ stty(void)
 		if ((n = strlen(s)) > siz-1)
 			die("stty parameter length too long\n");
 		*q++ = ' ';
-		q = memcpy(q, s, n);
+		memcpy(q, s, n);
 		q += n;
-		siz-= n + 1;
+		siz -= n + 1;
 	}
 	*q = '\0';
 	if (system(cmd) != 0)
@@ -3610,7 +3612,7 @@ xloadfont(Font *f, FcPattern *pattern)
 	FcResult result;
 	XGlyphInfo extents;
 
-	match = FcFontMatch(NULL, pattern, &result);
+	match = XftFontMatch(xw.dpy, xw.scr, pattern, &result);
 	if (!match)
 		return 1;
 
@@ -3675,9 +3677,6 @@ xloadfonts(char *fontstr, double fontsize)
 		}
 		defaultfontsize = usedfontsize;
 	}
-
-	FcConfigSubstitute(0, pattern, FcMatchPattern);
-	FcDefaultSubstitute(pattern);
 
 	if (xloadfont(&dc.font, pattern))
 		die("st: can't open font %s\n", fontstr);
@@ -4677,7 +4676,6 @@ void
 xrdb_load(void)
 {
 	/* XXX */
-	// TODO - this better -- see if can use xm.dpy sans seg fault.
 	char *xrm;
 	char *type;
 	XrmDatabase xrdb;
@@ -4693,34 +4691,31 @@ xrdb_load(void)
 	if (xrm != NULL) {
 		xrdb = XrmGetStringDatabase(xrm);
 
-		XRESOURCE_LOAD_STRING("font", font);
-		XRESOURCE_LOAD_STRING("color0", colorname[0]);
-		XRESOURCE_LOAD_STRING("color1", colorname[1]);
-		XRESOURCE_LOAD_STRING("color2", colorname[2]);
-		XRESOURCE_LOAD_STRING("color3", colorname[3]);
-		XRESOURCE_LOAD_STRING("color4", colorname[4]);
-		XRESOURCE_LOAD_STRING("color5", colorname[5]);
-		XRESOURCE_LOAD_STRING("color6", colorname[6]);
-		XRESOURCE_LOAD_STRING("color7", colorname[7]);
-		XRESOURCE_LOAD_STRING("color8", colorname[8]);
-		XRESOURCE_LOAD_STRING("color9", colorname[9]);
-		XRESOURCE_LOAD_STRING("color10", colorname[10]);
-		XRESOURCE_LOAD_STRING("color11", colorname[11]);
-		XRESOURCE_LOAD_STRING("color12", colorname[12]);
-		XRESOURCE_LOAD_STRING("color13", colorname[13]);
-		XRESOURCE_LOAD_STRING("color14", colorname[14]);
-		XRESOURCE_LOAD_STRING("color15", colorname[15]);
-		XRESOURCE_LOAD_STRING("color16", colorname[16]);
-		XRESOURCE_LOAD_STRING("color17", colorname[17]);
-		XRESOURCE_LOAD_STRING("color18", colorname[18]);
-		XRESOURCE_LOAD_STRING("color19", colorname[19]);
-		XRESOURCE_LOAD_STRING("color20", colorname[20]);
-		XRESOURCE_LOAD_STRING("color21", colorname[21]);
+		// handling colors here without macros to do via loop.
+		int i = 0;
+		char loadValue[11] = "";
+		for (i = 0; i < 256; i++)
+		{
+			sprintf(loadValue, "%s%d", "st.color", i);
+
+			if(!XrmGetResource(xrdb, loadValue, loadValue, &type, &ret))
+			{
+				sprintf(loadValue, "%s%d", "*.color", i);
+				if (!XrmGetResource(xrdb, loadValue, loadValue, &type, &ret))
+					// reset if not found.
+					colorname[i] = NULL;
+			}
+
+			if (ret.addr != NULL && !strncmp("String", type, 64))
+				colorname[i] = ret.addr;
+		}
+
 		XRESOURCE_LOAD_STRING("foreground", colorname[256]);
 		XRESOURCE_LOAD_STRING("background", colorname[257]);
-
+		XRESOURCE_LOAD_STRING("font", font);
 		XRESOURCE_LOAD_STRING("termname", termname);
 		XRESOURCE_LOAD_STRING("shell", shell);
+
 		XRESOURCE_LOAD_INTEGER("xfps", xfps);
 		XRESOURCE_LOAD_INTEGER("actionfps", actionfps);
 		XRESOURCE_LOAD_INTEGER("blinktimeout", blinktimeout);
@@ -4744,6 +4739,12 @@ reload(int sig)
 	xloadcols();
 	xunloadfonts();
 	xloadfonts(font, 0);
+
+	// tabs
+	int i=0;
+	memset(term.tabs, 0, term.col * sizeof(*term.tabs));
+	for (i = tabspaces; i < term.col; i += tabspaces)
+		term.tabs[i] = 1;
 
 	// pretend the window just got resized
 	cresize(xw.w, xw.h);

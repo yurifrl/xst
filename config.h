@@ -1,41 +1,75 @@
-/* todo: xrdb histsize, cols, rows, bellvolume */
+/* See LICENSE file for copyright and license details. */
 
-#define histsize 2000
+/*
+ * appearance
+ *
+ * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
+ */
+static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
+static int borderpx = 10;
 
-static unsigned int cols = 80;
-static unsigned int rows = 24;
-
-/* ref: http://freedesktop.org/software/fontconfig/fontconfig-user.html */
-static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true;";
-
-/* exec precedence: -e arg, utmp option, SHELL env var, /etc/passwd shell */
-static char *shell = "\0";
-
-/* set a char which can be printed with esc code \033[z */
-/* TODO: allow this to accept unicode */
-static char prompt_char = '$';
+/*
+ * What program is execed by st depends of these precedence rules:
+ * 1: program passed with -e
+ * 2: utmp option
+ * 3: SHELL environment variable
+ * 4: value of shell in /etc/passwd
+ * 5: value of shell in config.h
+ */
+static char *shell = "/bin/sh";
+char *utmp = NULL;
+char *stty_args = "stty raw pass8 nl -echo -iexten -cstopb 38400";
 
 /* identification sequence returned in DA and DECID */
-static char vtiden[] = "\033[?6c";
+char *vtiden = "\033[?6c";
 
 /* Kerning / character bounding-box multipliers */
 static float cwscale = 1.0;
 static float chscale = 1.0;
 
-/* work delimter strings. more advanced example : " `'\"()[]{}" */
-static char worddelimiters[] = " ";
+/*
+ * word delimiter string
+ *
+ * More advanced example: L" `'\"()[]{}"
+ */
+wchar_t *worddelimiters = L" ";
+
+/* selection timeouts (in milliseconds) */
+static unsigned int doubleclicktimeout = 300;
+static unsigned int tripleclicktimeout = 600;
 
 /* alt screens */
-static int allowaltscreen = 1;
+int allowaltscreen = 1;
 
-/* bell volume. Value between -100 and 100. (0 disables) */
-static int bellvolume = 100;
+/* frames per second st should at maximum draw to the screen */
+static unsigned int xfps = 120;
+static unsigned int actionfps = 30;
+
+/*
+ * blinking timeout (set to 0 to disable blinking) for the terminal blinking
+ * attribute.
+ */
+static unsigned int blinktimeout = 800;
+
+/*
+ * thickness of underline and bar cursors
+ */
+static unsigned int cursorthickness = 2;
+
+/*
+ * bell volume. It must be a value between -100 and 100. Use 0 for disabling
+ * it
+ */
+static int bellvolume = 0;
+
+/* default TERM value */
+char *termname = "xst-256color";
 
 /*
  * spaces per tab
  *
  * When you are changing this value, don't forget to adapt the »it« value in
- * the xst.info and appropriately install the xst.info in the environment where
+ * the st.info and appropriately install the st.info in the environment where
  * you use this st version.
  *
  *	it#$tabspaces,
@@ -46,25 +80,10 @@ static int bellvolume = 100;
  *
  *	stty tabs
  */
-static unsigned int tabspaces = 8;
-/* bg opacity */
-static int alpha = 0xff;
+unsigned int tabspaces = 8;
 
-
-/* other */
-static unsigned int doubleclicktimeout = 300;
-static unsigned int tripleclicktimeout = 600;
-static char *utmp = NULL;
-static unsigned int borderpx = 10;
-static unsigned int bold_font = 0;
-// If available font weight is different from fontconfig's FC_WEIGHT (200),
-// allow infelicity between the weights:
-static unsigned int max_bold_weight_infelicity = 20;
-static char stty_args[] = "stty raw pass8 nl -echo -iexten -cstopb 38400";
-static unsigned int xfps = 120;
-static unsigned int actionfps = 30;
-static char *termname = "xst-256color";
-static char *colorname[] = {
+/* Terminal colors (16 first used in escape sequence) */
+static const char *colorname[] = {
 	"#1e1e1e",
 	"#cf6a4c",
 	"#8f9d6a",
@@ -91,58 +110,58 @@ static char *colorname[] = {
 	"black",
 };
 
-/* fg, bg, cursor, reverse cursor (references colorname indexes) */
-static unsigned int defaultfg = 256;
-static unsigned int defaultbg = 257;
+
+/*
+ * Default colors (colorname index)
+ * foreground, background, cursor, reverse cursor
+ */
+unsigned int defaultfg = 256;
+unsigned int defaultbg = 257;
 static unsigned int defaultcs = 258;
 static unsigned int defaultrcs = 259;
 
-/* 2 4 6 7: █ _ | ☃ */
+/*
+ * Default shape of cursor
+ * 2: Block ("█")
+ * 4: Underline ("_")
+ * 6: Bar ("|")
+ * 7: Snowman ("☃")
+ */
 static unsigned int cursorshape = 2;
 
-/* 0: normal blinking
- * 1: leave cursor border and blink with cursor's background */
-static unsigned int cursorblinkstyle = 0;
+/*
+ * Default columns and rows numbers
+ */
 
-/* 0: cursor blinks with a constant interval
- * 1: blinking cycle resets on key input */
-static unsigned int cursorblinkontype = 1;
+static unsigned int cols = 80;
+static unsigned int rows = 24;
 
-/* thickness of underline and bar cursors */
-static unsigned int cursorthickness = 2;
-
-/* blinking timeout for terminal and cursor blinking (0 disables) */
-static unsigned int blinktimeout = 800;
-
-/* mouse (again colors reference colorname indexes) */
+/*
+ * Default colour and shape of the mouse cursor
+ */
 static unsigned int mouseshape = XC_xterm;
 static unsigned int mousefg = 7;
 static unsigned int mousebg = 0;
 
-/* Color used to display font attributes when fontconfig selected a font which
+/*
+ * Color used to display font attributes when fontconfig selected a font which
  * doesn't match the ones requested.
  */
 static unsigned int defaultattr = 11;
 
-/* Amout of lines scrolled with mouse */
-static int mousescrolllines = 1;
-
-/* Internal mouse shortcuts. */
-/* Beware that overloading Button1 will disable the selection. */
+/*
+ * Internal mouse shortcuts.
+ * Beware that overloading Button1 will disable the selection.
+ */
 static MouseShortcut mshortcuts[] = {
 	/* button               mask            string */
-	{ Button4,              XK_NO_MOD,      "\031" },
-	{ Button5,              XK_NO_MOD,      "\005" },
-};
-
-static MouseKey mkeys[] = {
-	/* button               mask            function        argument */
-	{ Button4,              XK_NO_MOD,      kscrollup,      {.i =  0} },
-	{ Button5,              XK_NO_MOD,      kscrolldown,    {.i =  0} },
+	{ Button4,              XK_ANY_MOD,     "\031" },
+	{ Button5,              XK_ANY_MOD,     "\005" },
 };
 
 /* Internal keyboard shortcuts. */
 #define MODKEY Mod1Mask
+#define TERMMOD (ControlMask|ShiftMask)
 
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
@@ -150,23 +169,24 @@ static Shortcut shortcuts[] = {
 	{ ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
 	{ ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
 	{ XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
-	{ MODKEY|ShiftMask,     XK_Prior,       xzoom,          {.f = +1} },
-	{ MODKEY|ShiftMask,     XK_Next,        xzoom,          {.f = -1} },
-	{ MODKEY|ShiftMask,     XK_Home,        xzoomreset,     {.f =  0} },
+	{ TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
+	{ TERMMOD,              XK_Next,        zoom,           {.f = -1} },
+	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
+	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
+	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
+	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
 	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
-	{ MODKEY|ShiftMask,     XK_Insert,      clippaste,      {.i =  0} },
-	{ MODKEY|ShiftMask,     XK_C,           clipcopy,       {.i =  0} },
-	{ MODKEY|ShiftMask,     XK_V,           clippaste,      {.i =  0} },
-	{ MODKEY,               XK_Num_Lock,    numlock,        {.i =  0} },
+	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
+
+	/* xst additions */
 	{ MODKEY,               XK_Control_L,   iso14755,       {.i =  0} },
 	{ MODKEY,               'u',            externalpipe,   {.v = "xurls | eval dmenu $(dmenu_options) | xargs -r $BROWSER" } },
 	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
 	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
 };
 
-
 /*
- * Special keys (change & recompile xst.info accordingly)
+ * Special keys (change & recompile st.info accordingly)
  *
  * Mask value:
  * * Use XK_ANY_MOD to match the key no matter modifiers state
@@ -190,9 +210,10 @@ static Shortcut shortcuts[] = {
  * position for a key.
  */
 
-
-/* If you want keys other than the X11 function keys (0xFD00 - 0xFFFF) */
-/* to be mapped below, add them to this array. */
+/*
+ * If you want keys other than the X11 function keys (0xFD00 - 0xFFFF)
+ * to be mapped below, add them to this array.
+ */
 static KeySym mappedkeys[] = { -1 };
 
 /*
@@ -201,9 +222,11 @@ static KeySym mappedkeys[] = { -1 };
  */
 static uint ignoremod = Mod2Mask|XK_SWITCH_MOD;
 
-/* Override mouse-select while mask is active (when MODE_MOUSE is set). */
-/* Note that if you want to use ShiftMask with selmasks, set this to an other */
-/* modifier, set to 0 to not use it. */
+/*
+ * Override mouse-select while mask is active (when MODE_MOUSE is set).
+ * Note that if you want to use ShiftMask with selmasks, set this to an other
+ * modifier, set to 0 to not use it.
+ */
 static uint forceselmod = ShiftMask;
 
 /* This is the huge key array which defines all compatibility to the Linux world. */
@@ -423,13 +446,41 @@ static Key key[] = {
 	{ XK_F35,           XK_NO_MOD,      "\033[23;5~",    0,    0,    0},
 };
 
-static char *imstyle = "root";
-
+/*
+ * Selection types' masks.
+ * Use the same masks as usual.
+ * Button1Mask is always unset, to make masks match between ButtonPress.
+ * ButtonRelease and MotionNotify.
+ * If no match is found, regular selection is used.
+ */
 static uint selmasks[] = {
 	[SEL_RECTANGULAR] = Mod1Mask,
 };
 
+/*
+ * Printable characters in ASCII, used to estimate the advance width
+ * of single wide characters.
+ */
 static char ascii_printable[] =
 	" !\"#$%&'()*+,-./0123456789:;<=>?"
 	"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
 	"`abcdefghijklmnopqrstuvwxyz{|}~";
+
+/* xst additions from here down */
+/* we do change some of the values above, below are just additions */
+
+/* set a char which can be printed with esc code \033[z */
+/* TODO: allow this to accept unicode */
+static char prompt_char = '$';
+
+/* bg opacity */
+static int alpha = 0xff;
+
+/* todo: turn this into this patch: */
+/* https://st.suckless.org/patches/disable_bold_italic_fonts/st-disable-bold-italic-fonts.diff */
+static unsigned int bold_font = 0;
+
+/* Amout of lines scrolled with mouse */
+static int mousescrolllines = 1;
+
+/* todo: xrdb histsize, cols, rows, bellvolume */

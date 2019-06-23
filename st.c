@@ -15,19 +15,12 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
-<<<<<<< HEAD
-#include <libgen.h>
-#include <X11/Xatom.h>
-#include <X11/Xlib.h>
+
+/* move to x.c? */
 #include <X11/Xutil.h>
-#include <X11/cursorfont.h>
-#include <X11/keysym.h>
-#include <X11/Xft/Xft.h>
-#include <X11/XKBlib.h>
 #include <X11/Xresource.h>
 #include <fontconfig/fontconfig.h>
-=======
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
+
 #include <wchar.h>
 
 #include "st.h"
@@ -48,39 +41,14 @@
 #define ESC_ARG_SIZ   16
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
-<<<<<<< HEAD
-#define XK_ANY_MOD    UINT_MAX
-#define XK_NO_MOD     0
-#define XK_SWITCH_MOD (1<<13)
+
 #define OPAQUE 0Xff
 
 /* macros */
-#define MIN(a, b)		((a) < (b) ? (a) : (b))
-#define MAX(a, b)		((a) < (b) ? (b) : (a))
-#define LEN(a)			(sizeof(a) / sizeof(a)[0])
 #define NUMMAXLEN(x)		((int)(sizeof(x) * 2.56 + 0.5) + 1)
-#define DEFAULT(a, b)		(a) = (a) ? (a) : (b)
-#define BETWEEN(x, a, b)	((a) <= (x) && (x) <= (b))
-#define DIVCEIL(n, d)		(((n) + ((d) - 1)) / (d))
-#define ISCONTROLC0(c)		(BETWEEN(c, 0, 0x1f) || (c) == '\177')
-#define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
-#define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
-#define ISDELIM(u)		(utf8strchr(worddelimiters, u) != NULL)
-#define LIMIT(x, a, b)		(x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
-#define ATTRCMP(a, b)		((a).mode != (b).mode || (a).fg != (b).fg || \
-				(a).bg != (b).bg)
-#define IS_SET(flag)		((term.mode & (flag)) != 0)
-#define TIMEDIFF(t1, t2)	((t1.tv_sec-t2.tv_sec)*1000 + \
-				(t1.tv_nsec-t2.tv_nsec)/1E6)
-#define MODBIT(x, set, bit)	((set) ? ((x) |= (bit)) : ((x) &= ~(bit)))
 
 #define USE_ARGB (alpha != OPAQUE && opt_embed == NULL)
 
-#define TRUECOLOR(r,g,b)	(1 << 24 | (r) << 16 | (g) << 8 | (b))
-#define IS_TRUECOL(x)		(1 << 24 & (x))
-#define TRUERED(x)		(((x) & 0xff0000) >> 8)
-#define TRUEGREEN(x)		(((x) & 0xff00))
-#define TRUEBLUE(x)		(((x) & 0xff) << 8)
 #define TLINE(y)		((y) < term.scr ? term.hist[((y) + term.histi - term.scr \
 				+ histsize + 1) % histsize] : term.line[(y) - term.scr])
 
@@ -113,21 +81,6 @@
 #define IMSTYLE_ROOT "root"
 #define IMSTYLE_OVERTHESPOT "overthespot"
 
-enum glyph_attribute {
-	ATTR_NULL       = 0,
-	ATTR_BOLD       = 1 << 0,
-	ATTR_FAINT      = 1 << 1,
-	ATTR_ITALIC     = 1 << 2,
-	ATTR_UNDERLINE  = 1 << 3,
-	ATTR_BLINK      = 1 << 4,
-	ATTR_REVERSE    = 1 << 5,
-	ATTR_INVISIBLE  = 1 << 6,
-	ATTR_STRUCK     = 1 << 7,
-	ATTR_WRAP       = 1 << 8,
-	ATTR_WIDE       = 1 << 9,
-	ATTR_WDUMMY     = 1 << 10,
-	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
-=======
 
 /* macros */
 #define IS_SET(flag)		((term.mode & (flag)) != 0)
@@ -145,7 +98,6 @@ enum term_mode {
 	MODE_PRINT       = 1 << 5,
 	MODE_UTF8        = 1 << 6,
 	MODE_SIXEL       = 1 << 7,
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
 };
 
 enum cursor_movement {
@@ -159,37 +111,6 @@ enum cursor_state {
 	CURSOR_ORIGIN   = 2
 };
 
-<<<<<<< HEAD
-enum term_mode {
-	MODE_WRAP        = 1 << 0,
-	MODE_INSERT      = 1 << 1,
-	MODE_APPKEYPAD   = 1 << 2,
-	MODE_ALTSCREEN   = 1 << 3,
-	MODE_CRLF        = 1 << 4,
-	MODE_MOUSEBTN    = 1 << 5,
-	MODE_MOUSEMOTION = 1 << 6,
-	MODE_REVERSE     = 1 << 7,
-	MODE_KBDLOCK     = 1 << 8,
-	MODE_HIDE        = 1 << 9,
-	MODE_ECHO        = 1 << 10,
-	MODE_APPCURSOR   = 1 << 11,
-	MODE_MOUSESGR    = 1 << 12,
-	MODE_8BIT        = 1 << 13,
-	MODE_BLINK       = 1 << 14,
-	MODE_FBLINK      = 1 << 15,
-	MODE_FOCUS       = 1 << 16,
-	MODE_MOUSEX10    = 1 << 17,
-	MODE_MOUSEMANY   = 1 << 18,
-	MODE_BRCKTPASTE  = 1 << 19,
-	MODE_PRINT       = 1 << 20,
-	MODE_UTF8        = 1 << 21,
-	MODE_SIXEL       = 1 << 22,
-	MODE_MOUSE       = MODE_MOUSEBTN|MODE_MOUSEMOTION|MODE_MOUSEX10\
-	                  |MODE_MOUSEMANY,
-};
-
-=======
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
 enum charset {
 	CS_GRAPHIC0,
 	CS_GRAPHIC1,
@@ -207,59 +128,12 @@ enum escape_state {
 	ESC_ALTCHARSET = 8,
 	ESC_STR_END    = 16, /* a final string was encountered */
 	ESC_TEST       = 32, /* Enter in test mode */
-<<<<<<< HEAD
-  ESC_UTF8       = 64,
-  ESC_DCS        =128,
-};
-
-enum window_state {
-	WIN_VISIBLE = 1,
-	WIN_FOCUSED = 2
-};
-
-enum selection_mode {
-	SEL_IDLE = 0,
-	SEL_EMPTY = 1,
-	SEL_READY = 2
-};
-
-enum selection_type {
-	SEL_REGULAR = 1,
-	SEL_RECTANGULAR = 2
-};
-
-enum selection_snap {
-	SNAP_WORD = 1,
-	SNAP_LINE = 2
-};
-
-int cursorblinkstate = 0;
-
-typedef unsigned char uchar;
-typedef unsigned int uint;
-typedef unsigned long ulong;
-typedef unsigned short ushort;
-
-typedef uint_least32_t Rune;
-
-typedef XftDraw *Draw;
-typedef XftColor Color;
-
-typedef struct {
-	Rune u;           /* character code */
-	ushort mode;      /* attribute flags */
-	uint32_t fg;      /* foreground  */
-	uint32_t bg;      /* background  */
-} Glyph;
-
-typedef Glyph *Line;
-
-=======
 	ESC_UTF8       = 64,
 	ESC_DCS        =128,
 };
 
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
+int cursorblinkstate = 0;
+
 typedef struct {
 	Glyph attr; /* current char attributes */
 	int x;
@@ -286,38 +160,6 @@ typedef struct {
 } Selection;
 
 <<<<<<< HEAD
-/* Purely graphic info */
-typedef struct {
-	Display *dpy;
-	Colormap cmap;
-	Window win;
-	Drawable buf;
-	Atom xembed, wmdeletewin, netwmname, netwmpid;
-	XIM xim;
-	XIC xic;
-	Draw draw;
-	Visual *vis;
-	XSetWindowAttributes attrs;
-	int scr;
-	int isfixed; /* is fixed geometry? */
-	int l, t; /* left and top offset */
-	int gm; /* geometry mask */
-	int tw, th; /* tty width and height */
-	int w, h; /* window width and height */
-	int ch; /* char height */
-	int cw; /* char width  */
-	int depth; /*  bit depth */
-	int cyo; /* char y offset */
-	char state; /* focus, redraw, visible */
-	int cursor; /* cursor style */
-} XWindow;
-
-typedef struct {
-	uint b;
-	uint mask;
-	char *s;
-} MouseShortcut;
-
 =======
 /* Internal representation of the screen */
 typedef struct {
@@ -1452,16 +1294,14 @@ execsh(void)
 	if ((sh = getenv("SHELL")) == NULL)
 		sh = (pw->pw_shell[0]) ? pw->pw_shell : cmd;
 
-<<<<<<< HEAD
 	if (shell[0] != '\0')
 		sh = shell;
 
-	if (opt_cmd)
-		prog = opt_cmd[0];
-=======
+	/* todo: rm this */
+	/* if (opt_cmd) */
+		/* prog = opt_cmd[0]; */
 	if (args)
 		prog = args[0];
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
 	else if (utmp)
 		prog = utmp;
 	else

@@ -7,7 +7,7 @@ VERSION = 0.7
 SRC = st.c x.c
 OBJ = $(SRC:.c=.o)
 
-all: options xst
+all: options st
 
 options:
 	@echo st build options:

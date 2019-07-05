@@ -16,7 +16,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-/* move to x.c? */
+/* todo: move to x.c? */
 #include <X11/Xutil.h>
 #include <X11/Xresource.h>
 #include <fontconfig/fontconfig.h>
@@ -323,14 +323,8 @@ static void tnewline(int);
 static void tputtab(int);
 static void tputc(Rune);
 static void treset(void);
-<<<<<<< HEAD
-static void tresize(int, int);
 static void tscrollup(int, int, int);
 static void tscrolldown(int, int, int);
-=======
-static void tscrollup(int, int);
-static void tscrolldown(int, int);
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
 static void tsetattr(int *, int);
 static void tsetchar(Rune, Glyph *, int, int);
 static void tsetdirt(int, int);
@@ -789,7 +783,6 @@ selsnap(int *x, int *y, int direction)
 	}
 }
 
-<<<<<<< HEAD
 void
 getbuttoninfo(XEvent *e)
 {
@@ -811,132 +804,6 @@ getbuttoninfo(XEvent *e)
 	}
 }
 
-void
-mousereport(XEvent *e)
-{
-	int x = x2col(e->xbutton.x), y = y2row(e->xbutton.y),
-	    button = e->xbutton.button, state = e->xbutton.state,
-	    len;
-	char buf[40];
-	static int ox, oy;
-
-	/* from urxvt */
-	if (e->xbutton.type == MotionNotify) {
-		if (x == ox && y == oy)
-			return;
-		if (!IS_SET(MODE_MOUSEMOTION) && !IS_SET(MODE_MOUSEMANY))
-			return;
-		/* MOUSE_MOTION: no reporting if no button is pressed */
-		if (IS_SET(MODE_MOUSEMOTION) && oldbutton == 3)
-			return;
-
-		button = oldbutton + 32;
-		ox = x;
-		oy = y;
-	} else {
-		if (!IS_SET(MODE_MOUSESGR) && e->xbutton.type == ButtonRelease) {
-			button = 3;
-		} else {
-			button -= Button1;
-			if (button >= 3)
-				button += 64 - 3;
-		}
-		if (e->xbutton.type == ButtonPress) {
-			oldbutton = button;
-			ox = x;
-			oy = y;
-		} else if (e->xbutton.type == ButtonRelease) {
-			oldbutton = 3;
-			/* MODE_MOUSEX10: no button release reporting */
-			if (IS_SET(MODE_MOUSEX10))
-				return;
-			if (button == 64 || button == 65)
-				return;
-		}
-	}
-
-	if (!IS_SET(MODE_MOUSEX10)) {
-		button += ((state & ShiftMask  ) ? 4  : 0)
-			+ ((state & Mod4Mask   ) ? 8  : 0)
-			+ ((state & ControlMask) ? 16 : 0);
-	}
-
-	if (IS_SET(MODE_MOUSESGR)) {
-		len = snprintf(buf, sizeof(buf), "\033[<%d;%d;%d%c",
-				button, x+1, y+1,
-				e->xbutton.type == ButtonRelease ? 'm' : 'M');
-	} else if (x < 223 && y < 223) {
-		len = snprintf(buf, sizeof(buf), "\033[M%c%c%c",
-				32+button, 32+x+1, 32+y+1);
-	} else {
-		return;
-	}
-
-	ttywrite(buf, len);
-}
-
-void
-bpress(XEvent *e)
-{
-	struct timespec now;
-	MouseShortcut *ms;
-	MouseKey *mk;
-
-	if (IS_SET(MODE_MOUSE) && !(e->xbutton.state & forceselmod)) {
-		mousereport(e);
-		return;
-	}
-
-	if (IS_SET(MODE_ALTSCREEN))
-		for (ms = mshortcuts; ms < mshortcuts + LEN(mshortcuts); ms++) {
-			if (e->xbutton.button == ms->b
-					&& match(ms->mask, e->xbutton.state)) {
-				ttysend(ms->s, strlen(ms->s));
-				return;
-			}
- 		}
-
-	for (mk = mkeys; mk < mkeys + LEN(mkeys); mk++) {
-		if (e->xbutton.button == mk->b
-				&& match(mk->mask, e->xbutton.state)) {
-			mk->func(&mk->arg);
-			return;
-		}
-	}
-
-	if (e->xbutton.button == Button1) {
-		clock_gettime(CLOCK_MONOTONIC, &now);
-
-		/* Clear previous selection, logically and visually. */
-		selclear(NULL);
-		sel.mode = SEL_EMPTY;
-		sel.type = SEL_REGULAR;
-		sel.oe.x = sel.ob.x = x2col(e->xbutton.x);
-		sel.oe.y = sel.ob.y = y2row(e->xbutton.y);
-
-		/*
-		 * If the user clicks below predefined timeouts specific
-		 * snapping behaviour is exposed.
-		 */
-		if (TIMEDIFF(now, sel.tclick2) <= tripleclicktimeout) {
-			sel.snap = SNAP_LINE;
-		} else if (TIMEDIFF(now, sel.tclick1) <= doubleclicktimeout) {
-			sel.snap = SNAP_WORD;
-		} else {
-			sel.snap = 0;
-		}
-		selnormalize();
-
-		if (sel.snap != 0)
-			sel.mode = SEL_READY;
-		tsetdirt(sel.nb.y, sel.ne.y);
-		sel.tclick2 = sel.tclick1;
-		sel.tclick1 = now;
-	}
-}
-
-=======
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
 char *
 getsel(void)
 {
@@ -3162,10 +3029,6 @@ tputc(Rune u)
 			goto check_control_code;
 		}
 
-<<<<<<< HEAD
-
-=======
->>>>>>> caa1d8fbea2b92bca24652af0fee874bdbbbb3e5
 		if (IS_SET(MODE_SIXEL)) {
 			/* TODO: implement sixel mode */
 			return;
@@ -3452,34 +3315,6 @@ drawregion(int x1, int y1, int x2, int y2)
 	}
 
 	loaded = 1;
-}
-
-int
-xsetcolorname(int x, const char *name)
-{
-	Color ncolor;
-
-	if (!BETWEEN(x, 0, LEN(dc.col)))
-		return 1;
-
-
-	if (!xloadcolor(x, name, &ncolor))
-		return 1;
-
-	XftColorFree(xw.dpy, xw.vis, xw.cmap, &dc.col[x]);
-	dc.col[x] = ncolor;
-
-	return 0;
-}
-
-void
-xtermclear(int col1, int row1, int col2, int row2) {
-	XftDrawRect(xw.draw,
-			&dc.col[IS_SET(MODE_REVERSE) ? defaultfg : defaultbg],
-			borderpx + col1 * xw.cw,
-			borderpx + row1 * xw.ch,
-			(col2-col1+1) * xw.cw,
-			(row2-row1+1) * xw.ch);
 }
 
 /*
